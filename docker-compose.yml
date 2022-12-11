@@ -1,0 +1,63 @@
+version: "3.7"
+services:
+    app:
+        build:
+            args:
+                user: sportcamp
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        image: sportcamp
+        container_name: sportcamp-app
+        restart: unless-stopped
+        tty: true
+        environment:
+            SERVICE_NAME: app
+            SERVICE_TAGS: dev
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        command: composer dump-autoload
+        networks:
+            - sportcamp
+
+    db:
+        image: mysql:8.0
+        container_name: sportcamp-db
+        restart: unless-stopped
+        env_file: .env
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+            ALLOW_EMPTY_PASSWORD: yes
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            -  mysql-data:/var/lib/mysql/
+            - ./mysql/my.cnf:/etc/mysql/my.cnf
+        command: --default-authentication-plugin=mysql_native_password
+        networks:
+            - sportcamp
+
+    nginx:
+        image: nginx:alpine
+        container_name: sportcamp-nginx
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./:/var/www
+            - ./nginx/conf.d/:/etc/nginx/conf.d/
+        networks:
+            - sportcamp
+
+volumes:
+    mysql-data:
+        driver: local
+
+networks:
+    sportcamp:
+        driver: bridge
